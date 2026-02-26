@@ -1,63 +1,49 @@
-#iSPRESSO:  Coffee Evolved
+# iSPRESSO MVP (sin conectividad)
 
-## Computer controlled, wifi enabled Espresso machine based on Raspberry Pi, written in Python
+Esta versión del repo está simplificada para un **producto mínimo viable**:
 
+- ❌ Sin WiFi
+- ❌ Sin Bluetooth
+- ❌ Sin control web
+- ❌ Sin scheduler
+- ✅ Solo control de máquina
+- ✅ Variables hardcodeadas de extracción
 
-![iSPRESSO](https://bitbucket.org/veggiebenz/pyspresso/raw/master/img/ispresso2.png "iSPRESSO closeup")
+## Variables hardcodeadas
 
+Se definen en `ispresso.py` dentro de `BrewProfile`:
 
-##iSPRESSO features:
+- `target_temp_c`
+- `presoak_time_s`
+- `wait_time_s`
+- `brew_time_s`
 
-* Programmable [PID Controller](https://en.wikipedia.org/wiki/PID_controller "PID Controller") for precise boiler temperature control
-* Programmable Pre-soak time, wait time, and brew time
-* Controllable from web browser, iPad, iPhone (Android coming soon) on Wifi network
-* Schedule allows programmable on / off timing for each day of the week
-* LCD readout for system status, toggle buttons for operation
+Valores por defecto actuales:
 
+- `target_temp_c = 93.0`
+- `presoak_time_s = 4.0`
+- `wait_time_s = 2.0`
+- `brew_time_s = 25.0`
 
-![iSPRESSO](https://bitbucket.org/veggiebenz/pyspresso/raw/master/img/ispresso1.png "iSPRESSO tall")
+## Qué hace este MVP
 
+- Mantiene temperatura con un control ON/OFF simple con histéresis.
+- Ejecuta un ciclo de extracción:
+  1. Pre-soak
+  2. Wait
+  3. Brew
 
-#Parts used:
+## Preparado para crecer (opcional)
 
-* Rancilio Silvia Espresso machine
-* Raspberry Pi Revision B, with power supply
-* Adafruit Pi Cobbler Breakout kit
-* small breadboard
-* wifi dongle
-* 2x Solid State Relay (SSR)
-* 2x16 LCD with i2c backpack 
-* 2x LED toggle buttons
-* 1-wire temperature sensor
-* 4" diameter hose clamp
-* heat transfer grease
-* some wires, solder, connectors, etc
+El diseño deja un punto de extensión para:
 
+- pantalla (`display_status`)
+- botones físicos (por ejemplo, botón de brew)
 
+sin reintroducir conectividad ni scheduler.
 
-#Tools used:
+## Integración con Raspberry Pi Pico H
 
-* Soldering Iron
-* Assorted Screwdrivers
-* Needlenose pliers
-* Wire strippers
-* Dremel
-* Power drill
-* 16mm Hole Saw
-* Rivet Gun
-* nibbler
-
-
-#Screenshots:
-
-* iSPRESSO Home Page
-
-
-![iSPRESSO](https://bitbucket.org/veggiebenz/pyspresso/raw/master/img/ispresso_home.png "iSPRESSO home page")
-
-
-
-* iSPRESSO Scheduler
-
-
-![iSPRESSO](https://bitbucket.org/veggiebenz/pyspresso/raw/master/img/ispresso_schedule.png "iSPRESSO scheduler")
+`ispresso.py` incluye una clase abstracta `MachineIO`.
+Debes implementar ahí tu capa real de hardware (pines, sensor de temperatura, SSR/bomba, etc.)
+en MicroPython/CircuitPython según tu setup.
