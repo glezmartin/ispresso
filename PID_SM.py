@@ -1,45 +1,57 @@
-import time, logging
+"""Controlador PID mínimo usado para regulación térmica.
 
-logger = logging.getLogger('ispresso')
+Versión simplificada para MVP:
+- elimina imports y variables no usadas,
+- mantiene únicamente la lógica de cálculo necesaria,
+- conserva la API pública usada históricamente (`compute`, `SetTunings`, etc.).
+"""
+
+from __future__ import annotations
+
+import time
+
 
 class PID:
+    """Implementación discreta simple de PID con límites de salida."""
 
-    # got this from brettbeauregard.com/blog/2011/04/improving-the-beginner's-pid-initialization/
-    def __init__(self, rate, kp, ki, kd):
-        self.Input = 0
-        self.Output = 0
-        self.Setpoint = 0
-        self.ITerm = 0
-        self.lastInput= 0
-        self.lastTime = 0
-        self.kp = 2
-        self.ki = 30
-        self.kd = 15
-        self.SampleTime = 1
-        self.outMin= 0
-        self.outMax = 100
+    def __init__(self, rate: float, kp: float, ki: float, kd: float) -> None:
+        self.Input = 0.0
+        self.Output = 0.0
+        self.Setpoint = 0.0
+
+        self.ITerm = 0.0
+        self.lastInput = 0.0
+        self.lastTime = time.time()
+
+        self.kp = 2.0
+        self.ki = 30.0
+        self.kd = 15.0
+        self.SampleTime = 1.0
+
+        self.outMin = 0.0
+        self.outMax = 100.0
         self.inAuto = False
-        self.SetOutputLimits(self.outMin,self.outMax)
+
+        self.SetOutputLimits(self.outMin, self.outMax)
         self.SetSampleTime(rate)
-        self.SetTunings(kp,ki,kd)
+        self.SetTunings(kp, ki, kd)
         self.SetMode("auto")
-        
-    def compute(self,Input,Setpoint):
+
+    def compute(self, Input: float, Setpoint: float) -> float:
         self.Input = Input
         self.Setpoint = Setpoint
         now = time.time()
-        #timeChange = now-self.lastTime
-        timeChange = self.SampleTime
-        if timeChange >= self.SampleTime:  #compute all the error working variables
+        timeChange = now - self.lastTime
+
+        if timeChange >= self.SampleTime:
             error = self.Setpoint - self.Input
-            self.ITerm += (self.ki*error)
-            if (self.ITerm > self.outMax):
+            self.ITerm += self.ki * error
+            if self.ITerm > self.outMax:
                 self.ITerm = self.outMax
             elif self.ITerm < self.outMin:
                 self.ITerm = self.outMin
-            dInput = (self.Input - self.lastInput)
 
-            #compute PID Output
+            dInput = self.Input - self.lastInput
             self.Output = self.kp * error + self.ITerm - self.kd * dInput
 
             if self.Output > self.outMax:
@@ -47,66 +59,55 @@ class PID:
             elif self.Output < self.outMin:
                 self.Output = self.outMin
 
-            #remember some variables for next time
             self.lastInput = self.Input
             self.lastTime = now
 
-            #emergency cutoff specific to thermoblock overheating
-            if self.Input > (self.Setpoint+2):
-                self.Output = 0
-                self.ITerm = 0
+            # Corte de seguridad por sobretemperatura.
+            if self.Input > (self.Setpoint + 2.0):
+                self.Output = 0.0
+                self.ITerm = 0.0
 
-            #logger.debug( "computing output: " + str(self.Output) + " error: " + str(error)
-            #             + " K, i, D: " + str(self.kp)+" "+ str(self.ki) + " " + str(self.kd)
-            #              + " Iterm: " + str(self.ITerm))
-            return self.Output
+        return self.Output
 
-    def SetTunings(self, Kp, Ki, Kd):
-        SampleTimeInSec = self.SampleTime
+    def SetTunings(self, Kp: float, Ki: float, Kd: float) -> None:
+        sample_time_s = self.SampleTime
         self.kp = Kp
-        self.ki = Ki* SampleTimeInSec
-        self.kd = Kd/ SampleTimeInSec
-        #logger.debug("PID changed to : " +str(self.kp)+" "+str(self.ki)+" "+str(self.kd))
+        self.ki = Ki * sample_time_s
+        self.kd = Kd / sample_time_s
 
-    def SetSampleTime(self,NewSampleTime):
+    def SetSampleTime(self, NewSampleTime: float) -> None:
         if NewSampleTime > 0:
-            ratio = NewSampleTime/self.SampleTime
-            self.ki*= ratio
+            ratio = NewSampleTime / self.SampleTime
+            self.ki *= ratio
             self.kd /= ratio
             self.SampleTime = NewSampleTime
 
-    def SetOutputLimits(self,Min, Max):
+    def SetOutputLimits(self, Min: float, Max: float) -> None:
         self.outMin = Min
         self.outMax = Max
-        if self.Output>self.outMax:
+
+        if self.Output > self.outMax:
             self.Output = self.outMax
         elif self.Output < self.outMin:
             self.Output = self.outMin
-        if self.ITerm > self.outMax:
-            self.ITerm = self.outMax
-        elif self.ITerm < self.outMin:
-            self.ITerm = self.outMin
-    def SetMode(self, Mode, output = 0):
-        newAuto = (Mode == "auto")
-        #if output is not None:
-            #self.Output = output
-        if newAuto and not self.inAuto:
-            #we just went from manual to Auto
-            self.Output = output
-            self.Initialize()
-        self.inAuto = newAuto
-    def Initialize(self):
-        self.lastInput = self.Input
-        self.ITerm = self.Output
+
         if self.ITerm > self.outMax:
             self.ITerm = self.outMax
         elif self.ITerm < self.outMin:
             self.ITerm = self.outMin
 
-if __name__=="__main__":
-    sampleTime = 1
-    pid = PID(sampleTime,1,1,1)
-    temp = 80
-    setpoint = 100
-    print pid.compute(temp, setpoint)
-    
+    def SetMode(self, Mode: str, output: float = 0.0) -> None:
+        new_auto = Mode == "auto"
+        if new_auto and not self.inAuto:
+            self.Output = output
+            self.Initialize()
+        self.inAuto = new_auto
+
+    def Initialize(self) -> None:
+        self.lastInput = self.Input
+        self.ITerm = self.Output
+
+        if self.ITerm > self.outMax:
+            self.ITerm = self.outMax
+        elif self.ITerm < self.outMin:
+            self.ITerm = self.outMin

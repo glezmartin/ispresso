@@ -47,3 +47,18 @@ sin reintroducir conectividad ni scheduler.
 `ispresso.py` incluye una clase abstracta `MachineIO`.
 Debes implementar ahí tu capa real de hardware (pines, sensor de temperatura, SSR/bomba, etc.)
 en MicroPython/CircuitPython según tu setup.
+
+
+## Test de PID (directorio nuevo)
+
+Se añadió el directorio `tests_pid/` con pruebas automáticas para validar:
+
+- respuesta cuando la temperatura está por debajo del setpoint,
+- saturación por límites de salida,
+- corte de seguridad por sobretemperatura.
+
+Ejecuta:
+
+```bash
+pytest -q tests_pid
+```
